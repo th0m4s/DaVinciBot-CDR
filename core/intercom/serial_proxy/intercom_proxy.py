@@ -1,4 +1,3 @@
-from json.decoder import JSONDecodeError
 import dvbcdr
 import serial
 import serial.tools.list_ports
@@ -60,7 +59,9 @@ def __data_received(port_serial, crc_subject, data):
         if isinstance(data, list):
             length = len(data)
             data_type, type_ctor = __get_data_type(data[0])
-            data = "[" + ",".join([("\"" + x + "\"" if data_type == 1 else str(x)) for x in data if type(x) == type_ctor]) + "]"
+
+            if data_type != -1:
+                data = "[" + ",".join([("\"" + x.replace("\"", "\\\"") + "\"" if data_type == 1 else str(x)) for x in data if type(x) == type_ctor]) + "]"
 
     if data_type in [0, 1, 2]:
         port_serial.write(bytes("{\"c\":2,\"t\":" + str(data_type) + (",\"l\":" + str(length) if length >= 0 else "") + ",\"s\":" + str(crc_subject) + ",\"v\":" + str(data) + "}\n", "utf-8"))
@@ -101,7 +102,7 @@ def handle_port(port_path, retry_count):
 
             try:
                 data = json.loads(raw_data)
-            except JSONDecodeError:
+            except json.decoder.JSONDecodeError:
                 print("Invalid JSON on", port_path, raw_data.decode("utf-8"))
                 continue
 
