@@ -21,6 +21,24 @@ def move_robot(robot_id: int, position: Union[Tuple[int, int], Tuple[int, int, i
     intercom.publish("move_robot", [robot_id, *position])
 
 
+def rotate_robot(robot_id: int, rotation: int, center_percentage: int = 50) -> None:
+    """
+    Rotates a robot to a specific angle.
+
+    Args:
+        robot_id: An integer representing the id of the robot to rotate.
+        rotation: The rotation in degrees the robot should be in.
+        center_percentage: A percentage (as an integer between 0 and 100) representing the center of rotation as a percentage between the wheels.
+            The default value is 50, which means the robot will rotate on itself.
+    """
+    if center_percentage < 0:
+        center_percentage = 0
+    elif center_percentage > 100:
+        center_percentage = 100
+
+    intercom.publish("move_robot", [robot_id, rotation, center_percentage])
+
+
 def move_servo(servo_id: Union[str, int], angle: int) -> None:
     """
     Moves a servo to a given angle.

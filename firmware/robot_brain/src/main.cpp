@@ -142,6 +142,8 @@ int requested_position[3];
 int* req_x = &requested_position[0];
 int* req_y = &requested_position[1];
 int* req_teta = &requested_position[2];
+int rotation_center_percentage = 50;
+bool follow_requested_position = true;
 bool arrived_sent = false;
 
 int* last_received_position;
@@ -188,7 +190,9 @@ void loop() {
                 requested_position[0] = last_received_position[1];
                 requested_position[1] = last_received_position[2];
                 requested_position[2] = last_received_position[3]; // send a negative rotation if not required
+                rotation_center_percentage = 50;
 
+                follow_requested_position = true;
                 arrived_sent = false;
             }
         }
@@ -202,13 +206,35 @@ void loop() {
             }
         }
 
-        if(Intercom::instantReceiveInt("rotate_robot", &last_received_length)) {
-            // last_received_length will contain the received int value, it's not really a length...
-            requested_position[2] = last_received_length;
-            arrived_sent = false;
+        if(Intercom::instantReceiveIntArray("rotate_robot", last_received_position, &last_received_length)) {
+            // here we are just using the last_received_position array to store the rotation and the center percentage
+            if((last_received_length == 2 || last_received_length == 3) && last_received_position[0] == ROBOT_ID) {
+                requested_position[2] = last_received_position[1];
+
+                if(last_received_length == 3) {
+                    rotation_center_percentage = last_received_position[2];
+
+                    if(rotation_center_percentage < 0) {
+                        rotation_center_percentage = 0;
+                    } else if(rotation_center_percentage > 100) {
+                        rotation_center_percentage = 100;
+                    }
+                } else {
+                    rotation_center_percentage = 50;
+                }
+
+                // if center_percentage is not 50, the robot will move by rotating, so we don't want to move back
+                follow_requested_position = false;
+
+                arrived_sent = false;
+            }
         }
 
-        int dist = distance(transform_approx[1], transform_approx[2], requested_position[0], requested_position[1]);
+        int dist = 0;
+        if(follow_requested_position) {
+            dist = distance(transform_approx[1], transform_approx[2], requested_position[0], requested_position[1])
+        } // if we don't want to follow the requested position, dist will be 0, hence `arrived` will be true
+
         double angle_difference = atan2(requested_position[1] - transform_approx[2], requested_position[0] - transform_approx[1]) - transform_approx[3];
         bool arrived = dist <= ARRIVAL_THRESHOLD;
 
@@ -230,10 +256,17 @@ void loop() {
 
                 if(abs(current_angle - requested_angle) > ROTATION_THRESOLD_DEG) {
                     int direction = current_angle > requested_angle ? 1 : -1;
-                    motorController->setSpeed(ROTATE_SPEED * direction, ROTATE_SPEED * -direction);
+                    float center_perc = (float) rotation_center_percentage / 100.0;
+
+                    motorController->setSpeed(ROTATE_SPEED * direction * 2 * center_perc, ROTATE_SPEED * -direction * 2 * (1 - center_perc));
                 } else {
                     // our orientation is correct, we stop the motors
                     motorController->setSpeed(0, 0);
+                    
+                    if(!arrived_sent) {
+                        arrived_sent = true;
+                        Intercom::publish("robot_arrived", ROBOT_ID);
+                    }
                 }
             } else {
                 // we don't want a specific orientation so we stop
