@@ -56,7 +56,7 @@ void speedInterruptionRight() {
 
 void updatePosition(double dleft, double dright) {
     double dcenter = (dleft + dright) / 2;
-    double phi = (dright - dleft) / wheel_distance;
+    double phi = (dright - dleft) / WHEEL_DIAMETER;
     double half = *robot_teta + phi / 2;
     
     *robot_x = *robot_x + dcenter * cos(half);
@@ -136,7 +136,7 @@ void setup() {
     robot_setup();
 }
 
-const float constDist = PI * wheel_diameter / wheel_ticks_count;
+const float constDist = PI * WHEEL_DIAMETER / WHEEL_TICKS_COUNT;
 
 int requested_position[3];
 int* req_x = &requested_position[0];

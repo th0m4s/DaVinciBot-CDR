@@ -2,10 +2,6 @@
 #include "controllers/BasicMotorController.h"
 #include "constants.h"
 
-#define kp 1
-#define ki 0
-#define kd 0
-
 #define error_int_max 1000
 
 BasicMotorController::BasicMotorController(int leftSpeedPin, int leftDirAPin, int leftDirBPin, int rightSpeedPin, int rightDirAPin, int rightDirBPin) {
@@ -52,8 +48,8 @@ void BasicMotorController::updateOutput(int ticksLeft, int ticksRight, elapsedMi
         _errorIntRight = -error_int_max;
     }
 
-    int cmdLeft = kp * errorLeft + _errorIntLeft + ki * _errorIntLeft + kd * (errorLeft - oldErrorLeft);
-    int cmdRight = kp * errorRight + _errorIntRight + ki * _errorIntRight + kd * (errorRight - oldErrorRight);
+    int cmdLeft = KP_L * errorLeft + _errorIntLeft + KI_L * _errorIntLeft + KD_L * (errorLeft - oldErrorLeft);
+    int cmdRight = KP_R * errorRight + _errorIntRight + KI_R * _errorIntRight + KD_R * (errorRight - oldErrorRight);
 
     if(cmdLeft >= 0) {
         digitalWrite(leftDirAPin, HIGH);
@@ -85,6 +81,6 @@ void BasicMotorController::updateOutput(int ticksLeft, int ticksRight, elapsedMi
 }
 
 void BasicMotorController::setSpeed(double left, double right) {
-    targetTicksLeftPerSec = left * wheel_ticks_count;
-    targetTicksRightPerSec = right * wheel_ticks_count;
+    targetTicksLeftPerSec = left * WHEEL_TICKS_COUNT;
+    targetTicksRightPerSec = right * WHEEL_TICKS_COUNT;
 }

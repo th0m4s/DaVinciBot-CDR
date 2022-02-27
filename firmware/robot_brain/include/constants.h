@@ -1,31 +1,39 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-#define posInterruptPin_left 8
-#define posInterruptPin_right 4
-#define posDirPin_left 9
-#define posDirPin_right 7
+// sch pins: pos_enc_left_a and pos_enc_left_b
+#define posInterruptPin_left 25
+#define posDirPin_left 26
 
-#define USE_SPEED_ENCODERS false
-#define speedInterruptPin_left 0
-#define speedInterruptPin_right 0
-#define speedDirPin_left 0
-#define speedDirPin_right 0
+// sch pins: pos_enc_right_a and pos_enc_right_b
+#define posInterruptPin_right 20
+#define posDirPin_right 21
 
-#define wheel_ticks_count 1024
 
+#define USE_SPEED_ENCODERS true
+
+// sch pins: speed_enc_left_a and speed_enc_left_b
+#define speedInterruptPin_left 27
+#define speedDirPin_left 28
+
+// sch pins: speed_enc_right_a and speed_enc_right_b
+#define speedInterruptPin_right 18 
+#define speedDirPin_right 19
+
+
+// sch pins: speed_left, speed_right, left_dir_a, left_dir_b, right_dir_a and right_dir_b
+#define motorPwm_left 8
+#define motorPwm_right 24
+#define motorDirA_left 9
+#define motorDirB_left 10
+#define motorDirA_right 13
+#define motorDirB_right 14
+
+
+#define WHEEL_TICKS_COUNT 1024
 // lengths are in mm
-#define wheel_distance 275
-#define wheel_diameter 61
-
-
-#define motorPwm_left 22
-#define motorPwm_right 23
-
-#define motorDirA_left 33
-#define motorDirB_left 34
-#define motorDirA_right 35
-#define motorDirB_right 36
+#define WHEEL_DISTANCE 275
+#define WHEEL_DIAMETER 61
 
 #define ARRIVAL_THRESHOLD 8
 #define ROTATION_THRESOLD_DEG 5
@@ -37,4 +45,18 @@
 #define ROTATE_SPEED 50
 
 #define ROBOT_ID -1
+
+
+
+#define PIN_SERVO_1 0
+#define PIN_SERVO_2 1
+#define PIN_SERVO_3 2
+#define PIN_SERVO_4 3
+#define PIN_SERVO_5 4
+#define PIN_SERVO_6 5
+
+#define PIN_DIN_1 6
+#define PIN_DIN_2 7
+#define PIN_AIN_1 A8
+#define PIN_AIN_2 A9
 #endif
