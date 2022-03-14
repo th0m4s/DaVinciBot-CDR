@@ -65,6 +65,7 @@ def table_clicked():
         return
 
     # [*(tuple)] transforms a tuple into a list/array with the * (= deconstruct) operator
+    # TODO: why not list(tuple)? the list constructor should correctly iterate the tuple
     intercom.publish("move_robot", [selected_robot, *mouse_to_table(pygame.mouse.get_pos(), table_size, irl_size, margins), -1])  # -1 is no forced rotation
 
 
@@ -123,38 +124,22 @@ scene.add_element("debug_checkbox", PygCdrCheckbox("Controlled by debug?", size=
 
 # GAME LOOP
 frame = 0
-while running:
-    intercom.run_callbacks()
+while True:
+    if scene.handle_events():
+        break
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-            break
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            scene.clicked()
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            scene.released()
-        elif event.type == pygame.MOUSEMOTION:
-            scene.hover()
-    # if we didn't break, we're still running, continue the logic, otherwise, we're not so break the while loop to quit
-    else:
-        # update logic
-        status = ""
-        for key, value in statuses.items():
-            status += "{}: {}  ".format(statuses_key[key], value)
-        status_text.render_text(status)
+    status = ""
+    for key, value in statuses.items():
+        status += "{}: {}  ".format(statuses_key[key], value)
+    status_text.render_text(status)
 
-        # draws the new scene
-        window.fill((255, 255, 255))
-        scene.show()
-        pygame.display.update()
+    if frame % 6 == 0:
+        intercom.publish("debug_mode", int(debug_mode))
 
-        if frame % 6 == 0:
-            intercom.publish("debug_mode", int(debug_mode))
+    # draws the new scene
+    scene.show()
 
-        frame += 1
-        clock.tick(24)
-        continue
-    break
+    frame += 1
+    clock.tick(24)
 
 pygame.quit()

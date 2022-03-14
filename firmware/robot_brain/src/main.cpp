@@ -121,6 +121,10 @@ void setup() {
     pinMode(motorDirA_right, OUTPUT);
     pinMode(motorDirB_right, OUTPUT);
 
+    analogWriteResolution(ANALOG_WRITE_RESOLUTION);
+    analogWriteFrequency(motorPwm_left, ANALOG_WRITE_FREQUENCY);
+    analogWriteFrequency(motorPwm_right, ANALOG_WRITE_FREQUENCY);
+
     digitalWrite(motorPwm_left, LOW);
     digitalWrite(motorPwm_right, LOW);
     digitalWrite(motorDirA_left, LOW);
@@ -128,7 +132,7 @@ void setup() {
     digitalWrite(motorDirA_right, LOW);
     digitalWrite(motorDirB_right, LOW);
 
-    motorController = new BasicMotorController(1, 2, 3, 4, 5, 6);
+    motorController = new BasicMotorController(motorPwm_left, motorDirA_left, motorDirB_left, motorPwm_right, motorDirA_right, motorDirB_right);
 
     timer.begin(logic, 10*1000); // in microseconds, so 10ms
     time = 0;

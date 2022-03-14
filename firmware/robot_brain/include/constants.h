@@ -46,6 +46,11 @@
 
 #define ROBOT_ID -1
 
+// because analogRead returns a 10-bit value (from 0 to 1023)
+#define ANALOG_WRITE_RESOLUTION 10
+// best frequency for a 10-bit resolution on a Teensy 4.1 board (https://www.pjrc.com/teensy/td_pulse.html)
+#define ANALOG_WRITE_FREQUENCY 146484.38f
+
 
 
 #define PIN_SERVO_1 0
