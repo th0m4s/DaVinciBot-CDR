@@ -1,20 +1,27 @@
 from abc import ABC
-from typing import Callable
+from typing import Callable, Dict
 import pygame
 
 
 class PygCdrObject(ABC):
-    def __init__(self, pos, size=None, object=None, cursor_data=None, onclick=None, onhover=None, onenter=None, onleave=None, onreleased=None, anchor=(0, 0)):
+    def __init__(self, pos, size=None, object=None, cursor_data=None, onclick=None, onhover=None, onenter=None, onleave=None, onreleased=None, onkeydown=None, anchor=(0, 0)):
         self.x, self.y = pos
+        self.visible = True
         self.anchor = anchor
         self.object = object
         self.cursor_data = cursor_data
+
+        self.focused = False
 
         self.onclick = onclick
         self.onhover = onhover
         self.onenter = onenter
         self.onleave = onleave
         self.onreleased = onreleased
+        self.onkeydown = onkeydown
+
+        self.onfocus = None
+        self.onblur = None
 
         self.is_hovered = False
         self.is_clicked = False
@@ -33,12 +40,16 @@ class PygCdrObject(ABC):
 
     def show(self, screen):
         """Shows the object on the screen."""
-        if self.object is not None:
+        if self.visible and self.object is not None:
             screen.blit(self.object, self.compute_pos())
 
     def clickable(self) -> bool:
         """Returns True if the object is clickable."""
         return self.onclick is not None
+
+    def focusable(self) -> bool:
+        """Returns True if the object can be focused."""
+        return self.onfocus is not None or self.onblur is not None
 
     def clicked(self, relative_mouse_pos):
         if self.clickable():
@@ -62,10 +73,19 @@ class PygCdrObject(ABC):
         x, y = mouse_pos
         return self.rect is not None and self.rect.collidepoint(x, y)
 
+    def keydown(self, event):
+        if self.onkeydown is not None:
+            if self.onkeydown.__code__.co_argcount >= 1:
+                self.onkeydown(event)
+            else:
+                self.onkeydown()
+
 
 class PygCdrScene():
     def __init__(self, window):
-        self.elements = {}
+        self.elements: Dict[str, PygCdrObject] = {}
+        self.focused_element: PygCdrObject = None
+        self.groups = {}
         self.last_cursor = None
         self.window = window
 
@@ -79,15 +99,80 @@ class PygCdrScene():
     def __getitem__(self, key):
         return self.elements[key]
 
+    def add_to_group(self, group, *elements):
+        if group not in self.groups:
+            self.groups[group] = []
+
+        for element in elements:
+            self.groups[group].append(element)
+
+    def show_group(self, group):
+        if group in self.groups:
+            for name in self.groups[group]:
+                self.elements[name].visible = True
+
+    def hide_group(self, group):
+        if group in self.groups:
+            for name in self.groups[group]:
+                self.elements[name].visible = False
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return True
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                self.clicked()
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                self.released()
+            elif event.type == pygame.MOUSEMOTION:
+                self.hover()
+            elif event.type == pygame.KEYDOWN:
+                self.keydown(event)
+
+        return False
+
+    def keydown(self, event):
+        if self.focused_element is not None:
+            if event.key == pygame.K_ESCAPE:
+                self.focused_element.focused = False
+                if self.focused_element.onblur is not None:
+                    self.focused_element.onblur()
+                self.focused_element = None
+            else:
+                self.focused_element.keydown(event)
+
     def clicked(self):
         mouse_pos = pygame.mouse.get_pos()
         for element in self.elements.values():
-            if element.clickable() and element.detect_mouse(mouse_pos):
+            detected = element.detect_mouse(mouse_pos)
+            if element.focusable() and detected:
+                if self.focused_element is not None and self.focused_element is not element:
+                    self.focused_element.focused = False
+                    if self.focused_element.onblur is not None:
+                        self.focused_element.onblur()
+
+                if not element.focused:
+                    if element.onfocus is not None:
+                        element.focused = True
+                        element.onfocus()
+                    self.focused_element = element
+
+                break
+            elif element.clickable() and detected:
                 element.clicked((mouse_pos[0] - element.x, mouse_pos[1] - element.y))
+                break
+
+            if self.focused_element is not None:
+                self.focused_element.focused = False
+                if self.focused_element.onblur is not None:
+                    self.focused_element.onblur()
+                self.focused_element = None
 
     def show(self):
+        self.window.fill((255, 255, 255))
         for element in self.elements.values():
             element.show(self.window)
+        pygame.display.update()
 
     def hover(self):
         cursor_got = False
@@ -130,7 +215,7 @@ class PygCdrScene():
 class PygCdrText(PygCdrObject):
     """Inspired by https://pythonprogramming.altervista.org/buttons-in-pygame/"""
 
-    def __init__(self, text, font_size, bg_color="white", font_color="black", font_name="Arial", **kwargs):
+    def __init__(self, text, font_size=14, bg_color="white", font_color="black", font_name="Arial", **kwargs):
         self.bg_color = bg_color
         self.font_color = font_color
         self.font = pygame.font.SysFont(font_name, font_size)
@@ -140,7 +225,7 @@ class PygCdrText(PygCdrObject):
         self.render_text(text)
 
     def render_text(self, text):
-        self.text_obj = self.font.render(text, 1, pygame.Color(self.font_color))
+        self.text_obj = self.font.render(text, True, pygame.Color(self.font_color))
         text_size = self.text_obj.get_size()
         tx, ty = 0, 0
 
@@ -153,6 +238,51 @@ class PygCdrText(PygCdrObject):
         self.object = pygame.Surface(self.size, pygame.SRCALPHA)
         self.object.fill(self.bg_color)
         self.object.blit(self.text_obj, (tx, ty))
+
+
+class PygCdrInputBox(PygCdrObject):
+    def __init__(self, default_text="", bg_color="#dddddd", focused_color="#aaaaaa", font_color="black", font_name="Arial", font_size=14, max_length=None, onchange=None, oninput=None, **kwargs):
+        self.text = default_text
+        self.bg_color = bg_color
+        self.focused_color = focused_color
+        self.font_color = font_color
+        self.font = pygame.font.SysFont(font_name, font_size)
+        self.max_length = max_length
+
+        self.onchange = onchange
+        self.oninput = oninput
+
+        super().__init__(**kwargs)
+
+        self.onfocus = lambda: self.render_text()
+        self.onblur = lambda: self.render_text()
+
+        if self.size is None:
+            self.update_size((200, 20))
+
+        self.render_text()
+
+    def render_text(self):
+        self.text_obj = self.font.render(self.text, 1, pygame.Color(self.font_color))
+
+        self.object = pygame.Surface(self.size, pygame.SRCALPHA)
+        self.object.fill(self.focused_color if self.focused else self.bg_color)
+        self.object.blit(self.text_obj, (0, 0))
+
+    def keydown(self, event):
+        super().keydown(event)
+
+        if self.focused:
+            if event.key == pygame.K_BACKSPACE:
+                self.text = self.text[:-1]
+            else:
+                if self.max_length is None or len(self.text) < self.max_length:
+                    self.text += event.unicode
+
+            if self.onchange is not None:
+                self.onchange(self.text)
+
+            self.render_text()
 
 
 class PygCdrSlider(PygCdrObject):

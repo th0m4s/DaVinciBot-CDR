@@ -8,7 +8,7 @@ import numpy as np
 import time
 
 print("Generating NumPy dataset...")
-np_dataset = bm.gen_numpy_set(3, 2000)
+np_dataset = bm.gen_numpy_set(6, 3000)
 
 print("Generating Python dataset...")
 py_dataset = bm.gen_python_set(3000)
@@ -52,7 +52,7 @@ start_load("with receiving thread")
 
 def send_messages():
     while True:
-        intercom.publish_data("test_topic")
+        intercom.publish("test_topic", 42)
 
 
 intercom.wait_in_new_thread()
@@ -64,13 +64,21 @@ print_summary()
 
 
 def publish_message():
-    intercom.publish_data("test_topic")
+    intercom.publish("test_topic", 42)
 
 
 print("\nTime to publish 10k messages (20 times):")
 start_publish = time.time()
 reps = repeat(publish_message, repeat=20, number=10000)
+time_diff = time.time() - start_publish
+
 print("  Min:", round_significant_decimals(np.min(reps), 4),
       "\tAvg:", round_significant_decimals(np.mean(reps), 4),
       "\tMax:", round_significant_decimals(np.max(reps), 4),
-      "\tTotal:", round_significant_decimals(time.time() - start_publish, 4))
+      "\tTotal:", round_significant_decimals(time_diff, 4))
+
+per_sec = [10000 / x for x in reps]
+print("Messages per second:")
+print("  Min:", int(np.min(per_sec)),
+      "\tAvg:", int(np.mean(per_sec)),
+      "\tMax:", int(np.max(per_sec)))
